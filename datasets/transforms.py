@@ -199,6 +199,16 @@ class RandomResize(object):
         return resize(img, target, size, self.max_size)
 
 
+class ResizeToCNN(object):
+    def __init__(self, round_to: int = 32):
+        self.round_to = round_to
+
+    def __call__(self, img, target=None):
+        size = (img.size[-2] - img.size[-2] % 32, img.size[-1] - img.size[-1] % 32)
+        image_to_return = resize(img, target, size)
+        return image_to_return
+
+
 class RandomPad(object):
     def __init__(self, max_pad):
         self.max_pad = max_pad
