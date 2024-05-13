@@ -8,8 +8,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
+torch.backends.cudnn.enabled = False  # CuDNN causes backpropagation errors with this code
 from torch.utils.data import DataLoader, DistributedSampler
 
+import datasets
 import util.misc as utils
 from datasets import build_dataset, get_coco_api_from_dataset
 from engine import evaluate, train_one_epoch
