@@ -10,6 +10,7 @@ import multiprocessing
 import timeit
 
 from .coco import make_coco_transforms, CocoDetection
+import datasets.transforms as T
 
 
 # class TIIGateDataset(TIIDataset):
@@ -105,6 +106,41 @@ from .coco import make_coco_transforms, CocoDetection
 #                     inputs[(n + "_aug", 0)] = self.to_tensor(inputs[(n, i)])
 
 
+def make_tii_transforms(image_set):
+
+    normalize = T.Compose([
+        T.ToTensor(),
+        T.Normalize([0.5, 0.5, 0.5], [0.225, 0.225, 0.225])
+    ])
+
+    # scales = [480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800]
+    scales = [256]
+
+    if image_set == 'train':
+        return T.Compose([
+            T.RandomHorizontalFlip(),
+            T.RandomSelect(
+                T.RandomResize(scales, max_size=1333),
+                T.Compose([
+                    T.RandomResize([150, 250, 350]),
+                    T.RandomSizeCrop(128, 350),
+                    T.RandomResize(scales, max_size=1333),
+                ])
+            ),
+            T.ResizeToCNN(),
+            normalize,
+        ])
+
+    if image_set == 'val':
+        return T.Compose([
+            T.RandomResize([256], max_size=1333),
+            T.ResizeToCNN(),
+            normalize,
+        ])
+
+    raise ValueError(f'unknown {image_set}')
+
+
 def build(image_set, args):
     root = Path(args.coco_path)
     assert root.exists(), f'provided TII path {root} does not exist'
@@ -115,7 +151,7 @@ def build(image_set, args):
 
     img_folder, ann_file = PATHS[image_set]
 
-    dataset = CocoDetection(img_folder, ann_file, transforms=make_coco_transforms(image_set), return_masks=args.masks)
+    dataset = CocoDetection(img_folder, ann_file, transforms=make_tii_transforms(image_set), return_masks=args.masks)
     return dataset
 
 #
