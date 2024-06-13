@@ -12,6 +12,8 @@ import torchvision
 from pycocotools import mask as coco_mask
 
 import datasets.transforms as T
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 class CocoDetection(torchvision.datasets.CocoDetection):
@@ -27,6 +29,11 @@ class CocoDetection(torchvision.datasets.CocoDetection):
         img, target = self.prepare(img, target)
         if self._transforms is not None:
             img, target = self._transforms(img, target)
+        # [_, h, w] = img.shape
+        # plt.imshow(img.permute(1, 2, 0) * 0.225 + 0.5)
+        # for i in range(target["keypoints"].shape[0]):
+        #     plt.scatter(target["keypoints"][i, :, 0] * w, target["keypoints"][i, :, 1] * h)
+        # plt.show()
         return img, target
 
 

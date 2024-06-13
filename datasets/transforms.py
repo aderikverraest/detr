@@ -40,6 +40,11 @@ def crop(image, target, region):
         target['masks'] = target['masks'][:, i:i + h, j:j + w]
         fields.append("masks")
 
+    if "keypoints" in target:
+        keypoints = target["keypoints"]
+        keypoints = keypoints - torch.as_tensor([j, i, 0])
+        target["keypoints"] = keypoints
+
     # remove elements for which the boxes or masks that have zero area
     if "boxes" in target or "masks" in target:
         # favor boxes selection when defining which elements to keep
@@ -49,6 +54,7 @@ def crop(image, target, region):
             keep = torch.all(cropped_boxes[:, 1, :] > cropped_boxes[:, 0, :], dim=1)
         else:
             keep = target['masks'].flatten(1).any(1)
+        # not necessary for the corners
 
         for field in fields:
             target[field] = target[field][keep]
@@ -66,6 +72,11 @@ def hflip(image, target):
         boxes = target["boxes"]
         boxes = boxes[:, [2, 1, 0, 3]] * torch.as_tensor([-1, 1, -1, 1]) + torch.as_tensor([w, 0, w, 0])
         target["boxes"] = boxes
+
+    if "keypoints" in target:
+        keypoints = target["keypoints"]
+        keypoints = keypoints[:, [1, 0, 3, 2], :] * torch.tensor([-1, 1, 1]) + torch.tensor([w, 0, 0])
+        target["keypoints"] = keypoints
 
     if "masks" in target:
         target['masks'] = target['masks'].flip(-1)
@@ -121,6 +132,11 @@ def resize(image, target, size, max_size=None):
         area = target["area"]
         scaled_area = area * (ratio_width * ratio_height)
         target["area"] = scaled_area
+
+    if "keypoints" in target:
+        keypoints = target["keypoints"]
+        scaled_keypoints = keypoints * torch.as_tensor([ratio_width, ratio_height, 1])
+        target["keypoints"] = scaled_keypoints
 
     h, w = size
     target["size"] = torch.tensor([h, w])
@@ -265,6 +281,14 @@ class Normalize(object):
             boxes = box_xyxy_to_cxcywh(boxes)
             boxes = boxes / torch.tensor([w, h, w, h], dtype=torch.float32)
             target["boxes"] = boxes
+        if "keypoints" in target:
+            keypoints = target["keypoints"]
+            keypoints = keypoints / torch.tensor([w, h, 1], dtype=torch.float32)
+            out_of_bounds = torch.where((keypoints[..., 0] < 0) | (keypoints[..., 0] > 1) | (keypoints[..., 1] < 0) | (keypoints[..., 1] > 1))
+            not_labeled = torch.where(keypoints[..., 2] == 0)
+            keypoints[out_of_bounds[0], out_of_bounds[1], 2] = 1.0
+            keypoints[not_labeled[0], not_labeled[1], :2] = 0.0
+            target["keypoints"] = keypoints
         return image, target
 
 
